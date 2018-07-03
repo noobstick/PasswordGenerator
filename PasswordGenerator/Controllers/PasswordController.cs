@@ -14,23 +14,39 @@ namespace PasswordGenerator.Controllers
     [ApiController]
     public class PasswordController : ControllerBase
     {
-        private readonly PasswordContext _context;
-
         private const string alphabets = "abcdefghijklmnopqrstuvwxyz";
         private const string numbers = "0123456789";
         private const string symbols = "!@#$%^&*()_+{}|:<>?,.";
         private const int multiplePass = 10;
 
         private List<Password> passList = new List<Password>();
+        Random rng = new Random();
 
-        public PasswordController(PasswordContext context)
+        public PasswordController()
         {
-            _context = context;
         }
 
-        [HttpPost("generate")]
-        public IActionResult Generate(PasswordRequirement passwordReq)
+        [HttpGet]
+        public IActionResult Get()
         {
+            string criteria = GetPasswordCriteria();
+            passList.Add(GeneratePassword(criteria, rng.Next(10, 50)));
+
+            return new JsonResult(passList);
+        }
+
+        [HttpGet("criteria")]
+        public IActionResult GetWithCriteria([FromQuery]int length, [FromQuery]bool lowerCase, [FromQuery]bool upperCase, [FromQuery]bool numbers, [FromQuery]bool symbols, [FromQuery]bool multiPass)
+        {
+            PasswordRequirement passwordReq = new PasswordRequirement
+            {
+                Length = length,
+                IncludeLowercase = lowerCase,
+                IncludeUpperCase = upperCase,
+                IncludeNumbers = numbers,
+                IncludeSymbols = symbols,
+                MultiplePasswords = multiPass
+            };
             string criteria = GetPasswordCriteria(passwordReq);
 
             if (passwordReq.Length > 0 && passwordReq.MultiplePasswords)
@@ -40,7 +56,7 @@ namespace PasswordGenerator.Controllers
                     passList.Add(GeneratePassword(criteria, passwordReq.Length));
                 }
             }
-            else
+            else if (passwordReq.Length > 0)
             {
                 passList.Add(GeneratePassword(criteria, passwordReq.Length));
             }
@@ -50,7 +66,6 @@ namespace PasswordGenerator.Controllers
 
         private Password GeneratePassword(string criteria, int passwordLength = 10)
         {
-            Random rng = new Random();
             Password password = new Password();
             for (int i = 0; i < passwordLength; i++)
             {
@@ -61,28 +76,35 @@ namespace PasswordGenerator.Controllers
             return password;
         }
 
-        private string GetPasswordCriteria(PasswordRequirement passwordReq)
+        private string GetPasswordCriteria(PasswordRequirement passwordReq = null)
         {
             string criteria = "";
 
-            if (passwordReq.IncludeLowercase)
+            if (passwordReq != null)
             {
-                criteria += alphabets;
-            }
+                if (passwordReq.IncludeLowercase)
+                {
+                    criteria += alphabets;
+                }
 
-            if (passwordReq.IncludeUpperCase)
-            {
-                criteria += alphabets.ToUpper();
-            }
+                if (passwordReq.IncludeUpperCase)
+                {
+                    criteria += alphabets.ToUpper();
+                }
 
-            if (passwordReq.IncludeNumbers)
-            {
-                criteria += numbers;
-            }
+                if (passwordReq.IncludeNumbers)
+                {
+                    criteria += numbers;
+                }
 
-            if (passwordReq.IncludeSymbols)
+                if (passwordReq.IncludeSymbols)
+                {
+                    criteria += symbols;
+                }
+            }
+            else
             {
-                criteria += symbols;
+                criteria += alphabets + alphabets.ToUpper() + numbers + symbols;
             }
 
             return criteria;
